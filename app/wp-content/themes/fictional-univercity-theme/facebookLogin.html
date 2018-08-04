@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <script src="https://www.bugaboo.tv/js/jquery-3.1.1.min.js"></script>
+    <script src="https://www.bugaboo.tv/js/owl.carousel.2.2.min.js"></script>
+    <script src="https://www.bugaboo.tv/js/aws-cognito-sdk.min.js?cron&p=10"></script>
+    <script src="https://www.bugaboo.tv/js/amazon-cognito-identity.min.js?cron&p=10"></script>
+    <script src="https://www.bugaboo.tv/js/aws-sdk-2.106.0.min.js?cron&p=10"></script>
+    <script src="https://www.bugaboo.tv/js/amazon-cognito.min.js?cron&p=10"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+
+    <title>Document</title>
+</head>
+<body>
+
+
+<button id="facebookSignUpButton" name="facebookSignUpButton"
+        onclick="window.location.href='https://yo-test.auth.ap-southeast-1.amazoncognito.com/oauth2/authorize?identity_provider=Facebook&redirect_uri=https://www.bugaboo.tv/test/test_yo_userpool_loginFacebook&response_type=token&client_id=44toklisojv4hqd32l7lpgffs1'"
+    class="btn facebook-button socialButton-customizable">
+        <span><svg class="social-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 216 216" color="#ffffff">
+            <path fill="#ffffff" d="
+                M204.1 0H11.9C5.3 0 0 5.3 0 11.9v192.2c0 6.6 5.3 11.9 11.9
+                11.9h103.5v-83.6H87.2V99.8h28.1v-24c0-27.9 17-43.1 41.9-43.1
+                11.9 0 22.2.9 25.2 1.3v29.2h-17.3c-13.5 0-16.2 6.4-16.2
+                15.9v20.8h32.3l-4.2 32.6h-28V216h55c6.6 0 11.9-5.3
+                11.9-11.9V11.9C216 5.3 210.7 0 204.1 0z"></path>
+            </svg></span>
+    <span>Continue with Facebook</span>
+</button>
+<div id="status"></div>
+<div id="list"></div>
+<button onclick="logout()" id="logout">logout</button>
+
+<!-- <a href="https://bugaboowebauth.auth.us-east-1.amazoncognito.com/oauth2/authorize?identity_provider=Facebook&redirect_uri=https://www2.bugaboo.tv/test/loginCognitoFb?cron&response_type=CODE&client_id=6putiid1ununeeb3blvk3ki5a7&scope=aws.cognito.signin.user.admin email openid phone profile" target="_blank">Login Facebook</a>    -->
+
+<!--<a href="https://bugaboowebauth.auth.us-east-1.amazoncognito.com/signup?response_type=code&client_id=6putiid1ununeeb3blvk3ki5a7&redirect_uri=https://www2.bugaboo.tv/test/loginCognitoFb?cron" target="_blank">Login Facebook</a>-->
+
+<!-- <fb:login-button scope="public_profile,email" onclick="FB.getLoginStatus(statusChangeCallback);"></fb:login-button>-->
+
+
+
+<script>
+
+    function statusChangeCallback(response) {
+        console.log('statusChangeCallback');
+        console.log(response);
+
+        if (response.status === 'connected' && response.authResponse) {
+            console.log('token=>'+response.authResponse.accessToken);
+
+        } else if (response.status === 'not_authorized') {
+            //document.getElementById('status').innerHTML = 'Please log into this app.';
+        } else {
+            // document.getElementById('status').innerHTML = 'Please log into Facebook.';
+        }
+    }
+
+    window.fbAsyncInit = function() {
+        FB.init({
+            appId      : '276363676469544',
+            cookie     : true,  // enable cookies to allow the server to access
+            xfbml      : true,  // parse social plugins on this page
+            version    : 'v2.5' // use graph api version 2.8
+        });
+
+        FB.getLoginStatus(statusChangeCallback);
+        var COUNT_CHECK_FB = 1;
+        var LIMIT_CHECK_FB = 20;
+        var intervalPlayerLogin = setInterval(function(){
+            try {
+                if (COUNT_CHECK_FB == LIMIT_CHECK_FB) {
+                    clearInterval(intervalPlayerLogin);
+                }
+                if (typeof bplayer != 'undefined' && typeof bplayer.playerLogin != 'undefined') {
+                    console.log('intervalPlayerLogin main page')
+                    bplayer.playerLogin.setFBReady();
+                    clearInterval(intervalPlayerLogin);
+                }
+            } catch (e) {}}, 2000)
+
+    };
+
+    (function(d, s, id) {
+        var js, fjs = d.getElementsByTagName(s)[0];
+        if (d.getElementById(id)) return;
+        js = d.createElement(s); js.id = id;
+        js.src = "//connect.facebook.net/en_US/sdk.js";
+        fjs.parentNode.insertBefore(js, fjs);
+    }(document, 'script', 'facebook-jssdk'));
+
+    console.log('from localStorage access_token'+localStorage.getItem('access_token'));
+    console.log('from localStorage id_token'+localStorage.getItem('id_token'));
+    console.log('from localStorage expires_in'+localStorage.getItem('expires_in'));
+
+
+
+    function isAuthenticated() {
+        // Check whether the current time is past the
+        // access token's expiry time
+        var expiresAt = Number(localStorage.getItem('expires_in'));
+        return new Date().getTime() < expiresAt;
+    }
+
+    var loginBtn = document.getElementById('facebookSignUpButton');
+    var logoutBtn = document.getElementById('logout');
+    var loginStatus = document.getElementById('status');
+
+    function displayButtons() {
+        if (isAuthenticated()) {
+            loginBtn.style.display = 'none';
+            logoutBtn.style.display = 'inline-block';
+            loginStatus.innerHTML = 'You are logged in!';
+        } else {
+            loginBtn.style.display = 'inline-block';
+            logoutBtn.style.display = 'none';
+            loginStatus.innerHTML =
+                'You are not logged in! Please log in to continue.';
+        }
+    }
+
+    displayButtons();
+
+</script>
+
+
+
+
+
+</body>
+</html>

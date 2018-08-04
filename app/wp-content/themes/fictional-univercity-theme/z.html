@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Facebook Login JavaScript Example</title>
+    <meta charset="UTF-8">
+    <script src="https://www.bugaboo.tv/js/aws-cognito-sdk.min.js?cron&p=1"></script>
+    <script src="https://www.bugaboo.tv/js/amazon-cognito-identity.min.js?cron&p=1"></script>
+    <script src="https://www.bugaboo.tv/js/aws-sdk-2.106.0.min.js?cron&p=1"></script>
+    <script src="https://www.bugaboo.tv/js/amazon-cognito.min.js?cron&p=1"></script>
+
+</head>
+<body>
+<form id="signup-form">
+    <h1>signup form</h1>
+    <input type="text" id="signup-email" name="signup-email" placeholder="email">
+    <input type="password" id="signup-password" name="signup-password" placeholder="password">
+    <button type="button" id="signup-bt">sign up</button>
+    <div id="signup-debug"></div>
+</form>
+<br>
+<hr>
+<form id="confirm-register-form">
+    <h1>Confirm Code form</h1>
+    <input type="text" id="confirm-email" name="confirm" placeholder="Email ที่ต้องการ confirm">
+    <input type="text" id="confirm-cdoe" name="confirm-cdoe" placeholder="confirm code">
+    <button type="button" id="confirm-bt">sign up</button>
+    <div id="confirm-debug"></div>
+</form>
+<br>
+<hr>
+<form id="login-form">
+    <h1>login form</h1>
+    <input type="text" id="login-email" name="login-email" placeholder="email">
+    <input type="password" id="login-password" name="login-password" placeholder="login-password">
+    <button type="button" id="login-bt">login</button>
+    <div id="login-debug"></div>
+</form>
+<br>
+<hr>
+<a href="javascript:void(0);" class="signout">signout</a>
+<script src="//js.bug-a-boo.tv/js/jquery-3.1.1.min.js"></script>
+<script>
+
+
+    AWS.config.region = 'ap-southeast-1'; //This is required to derive the endpoint
+    //AWS.config.region = 'us-west-2'; //This is required to derive the endpoint
+
+    /* var poolData = {
+       UserPoolId : 'us-east-1_tHyK0z2a9',
+       ClientId : '1sca8453j8hd664hj12653f49g'
+     };*/
+
+    var poolData = {
+        UserPoolId : 'ap-southeast-1_KMyDF7Yj8', // Your user pool id here
+        ClientId : '44toklisojv4hqd32l7lpgffs1' // Your client id here
+    };
+
+    /*
+        var poolData = {
+            UserPoolId : 'us-west-2_39kPxBnCQ', // Your user pool id here
+            ClientId : '5ne31f2kt8b52dna8oapusbdat' // Your client id here
+        }; */
+
+    var userPool = new AWSCognito.CognitoIdentityServiceProvider.CognitoUserPool(poolData);
+    var cognitoUser = userPool.getCurrentUser();
+    console.log(cognitoUser);
+
+    $(document).ready(function(){
+
+        $('#signup-bt').on('click', function() {
+
+            var attributeList = [];
+            var signUpEmail = $('#signup-email').val();
+            var signUpPass = $('#signup-password').val();
+
+            if ( signUpEmail != '' && signUpPass != '' ) {
+
+                var dataEmail = {
+                    Name : 'email',
+                    Value : signUpEmail
+                };
+
+                var attributeEmail = new AWSCognito.CognitoIdentityServiceProvider.CognitoUserAttribute(dataEmail);
+                attributeList.push(attributeEmail);
+
+                userPool.signUp(signUpEmail, signUpPass, attributeList, null, function(err, result){
+                    if (err) {
+                        $('#signup-debug').append(err);
+                        return;
+                    }
+                    var cognitoUser = result.user;
+                    console.log(cognitoUser);
+                    $('#signup-debug').append('<br/>user name is ' + cognitoUser.getUsername());
+                });
+
+            }
+
+        });
+
+        $('#confirm-bt').on('click', function () {
+
+            var confirmEmail = $('#confirm-email').val();
+            var confirmCode = $('#confirm-cdoe').val();
+
+            var userData = {
+                Username : confirmEmail,
+                Pool : userPool
+            };
+
+            var cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
+
+            cognitoUser.confirmRegistration(confirmCode, true, function(err, result) {
+                if (err) {
+                    $('#confirm-debug').append(err);
+                    return;
+                }
+                console.log(result);
+            });
+
+        });
+
+        $('button#login-bt').on('click', function () {
+
+            $('#login-debug').html('');
+            var loginEmail = $('#login-email').val();
+            var loginPassword = $('#login-password').val();
+
+            var authenticationData = {
+                Username : loginEmail,
+                Password : loginPassword
+            };
+
+            var authenticationDetails = new AWSCognito.CognitoIdentityServiceProvider.AuthenticationDetails(authenticationData);
+
+            var userData = {
+                Username : loginEmail,
+                Pool : userPool
+            };
+
+            var cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
+            cognitoUser.authenticateUser(authenticationDetails, {
+                onSuccess: function (result) {
+                    console.log('login');
+                    console.log(result.getAccessToken());
+                    console.log(result);
+                    console.log('access token + ' + result.getAccessToken().getJwtToken());
+                    /*Use the idToken for Logins Map when Federating User Pools with Cognito Identity or when passing through an Authorization Header to an API Gateway Authorizer*/
+                    console.log('idToken + ' + result.idToken.jwtToken);
+                    $('#login-debug').append('login success.');
+
+                    console.log('sync indentity pool');
+
+                    AWS.config.credentials = new AWS.CognitoIdentityCredentials({
+                        IdentityPoolId: 'us-east-1:24b33d13-bc81-4af5-93a4-5574e95e6610',
+                        // IdentityPoolId: 'us-east-1:24b33d13-bc81-4af5-93a4-5574e95e6610',
+                        Logins: {
+                            'cognito-idp.us-east-1.amazonaws.com/us-east-1_tHyK0z2a9': result.idToken.jwtToken
+                        }
+                    });
+
+                    console.log(AWS.config.credentials);
+
+                    AWS.config.credentials.get(function(){
+                        var syncClient = new AWS.CognitoSyncManager();
+
+                        var dataSet = 'webDataset';
+                        var myKey = 'webKey';
+                        var myValue = 'webValue';
+                        if( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ) {
+
+                            dataSet = 'mobileDataset';
+                            myKey = 'mobileKey';
+                            myValue = 'mobileValue';
+
+                        }
+                        alert(dataSet);
+
+                        syncClient.openOrCreateDataset(dataSet, function(err, dataset) {
+                            dataset.put(myKey, myValue, function(err, record){
+                                dataset.synchronize({
+                                    onSuccess: function(data, newRecords) {
+                                        console.log('data');
+                                        console.log(data);
+                                        console.log('newRecords');
+                                        console.log(newRecords);
+                                    }
+                                });
+                            });
+                        });
+                    });
+
+                },
+                onFailure: function(err) {$('#login-debug').append(err);},
+            });
+
+        });
+
+        //sign out
+        $('a.signout').on('click', function(){
+            console.log('signout');
+            console.log(cognitoUser);
+            if (cognitoUser != null) {cognitoUser.signOut();}
+        });
+
+    });
+</script>
+
+<fb:login-button scope="public_profile,email" onlogin="checkLoginState();">
+</fb:login-button>
+
+<div id="status">
+</div>
+
+</body>
+</html>
